@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor HTML XP Enhanced</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ECE9D8;
+            color: #000000;
+        }
+        .window {
+            background-color: #ECE9D8;
+            border: 1px solid #0054E3;
+            border-radius: 3px;
+            box-shadow: inset 1px 1px #FFFFFF, inset -1px -1px #848484;
+        }
+        .title-bar {
+            background: linear-gradient(to right, #0A246A, #A6CAF0);
+            padding: 2px 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .menu-bar {
+            background-color: #ECE9D8;
+            padding: 2px;
+            border-bottom: 1px solid #848484;
+        }
+        .menu-item {
+            display: inline-block;
+            padding: 2px 5px;
+            cursor: pointer;
+        }
+        .menu-item:hover {
+            background-color: #316AC5;
+            color: white;
+        }
+        .editor-container {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+        #editor {
+            flex: 1;
+            resize: none;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #848484;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #ECE9D8;
+            margin: 15% auto;
+            padding: 0;
+            border: 1px solid #0054E3;
+            width: 50%;
+            box-shadow: inset 1px 1px #FFFFFF, inset -1px -1px #848484, 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .modal-body {
+            padding: 10px;
+        }
+        .close {
+            color: #FFFFFF;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #FF0000;
+        }
+        .button {
+            background-color: #ECE9D8;
+            border: 1px solid #003C74;
+            padding: 5px 10px;
+            cursor: pointer;
+            box-shadow: inset 1px 1px #FFFFFF, inset -1px -1px #848484;
+            margin: 2px;
+        }
+        .button:hover {
+            background-color: #316AC5;
+            color: white;
+        }
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #008080;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        #loading-screen img {
+            width: 200px;
+            height: auto;
+        }
+        .error-message {
+            background-color: #FFCCCC;
+            border: 1px solid #FF0000;
+            color: #FF0000;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .submenu {
+            display: none;
+            position: absolute;
+            background-color: #ECE9D8;
+            border: 1px solid #848484;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .submenu .button {
+            display: block;
+            width: 100%;
+            text-align: left;
+        }
+        nav {
+            background-color: #ECE9D8;
+            padding: 5px;
+            border-bottom: 1px solid #848484;
+        }
+        nav a {
+            color: #000000;
+            text-decoration: none;
+            padding: 5px 10px;
+            margin-right: 5px;
+            border: 1px solid #003C74;
+            background-color: #ECE9D8;
+            box-shadow: inset 1px 1px #FFFFFF, inset -1px -1px #848484;
+        }
+        nav a:hover {
+            background-color: #316AC5;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <img src="https://i.imgur.com/7TI9AF9.gif" alt="Windows XP Loading">
+    </div>
+
+    <div class="window">
+        <div class="title-bar">
+            Editor HTML XP Enhanced
+            <span class="close" onclick="closeWindow()">&times;</span>
+        </div>
+        <div class="menu-bar">
+            <div class="menu-item" onclick="showMenu('file')">Archivo</div>
+            <div class="menu-item" onclick="showMenu('edit')">Editar</div>
+            <div class="menu-item" onclick="showMenu('insert')">Insertar</div>
+            <div class="menu-item" onclick="showMenu('format')">Formato</div>
+            <div class="menu-item" onclick="showMenu('tools')">Herramientas</div>
+            <div class="menu-item" onclick="showMenu('view')">Ver</div>
+            <div class="menu-item" onclick="showMenu('help')">Ayuda</div>
+        </div>
+        <nav>
+            <a href="notas.html">Edit Note</a>
+            <a href="md.html">Edit MD</a>
+            <a href="nyx.HTML">Generate Code</a>
+        </nav>
+        <div class="editor-container">
+            <textarea id="editor" placeholder="Escribe tu código HTML aquí..."></textarea>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="title-bar">
+                <span id="modal-title"></span>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simulación de carga
+        window.onload = function() {
+            setTimeout(function() {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 3000);
+        }
+
+        function showMenu(menuType) {
+            let menuContent = '';
+            switch(menuType) {
+                case 'file':
+                    menuContent = `
+                        <button class="button" onclick="newFile()">Nuevo</button>
+                        <button class="button" onclick="openFile()">Abrir</button>
+                        <button class="button" onclick="saveFile()">Guardar</button>
+                        <button class="button" onclick="saveFileAs()">Guardar como...</button>
+                        <button class="button" onclick="exportToPDF()">Exportar a PDF</button>
+                        <button class="button" onclick="printPreview()">Vista previa de impresión</button>
+                        <button class="button" onclick="closeFile()">Cerrar archivo</button>
+                    `;
+                    break;
+                case 'edit':
+                    menuContent = `
+                        <button class="button" onclick="undo()">Deshacer</button>
+                        <button class="button" onclick="redo()">Rehacer</button>
+                        <button class="button" onclick="cutText()">Cortar</button>
+                        <button class="button" onclick="copyText()">Copiar</button>
+                        <button class="button" onclick="pasteText()">Pegar</button>
+                        <button class="button" onclick="selectAll()">Seleccionar todo</button>
+                        <button class="button" onclick="find()">Buscar</button>
+                        <button class="button" onclick="replace()">Reemplazar</button>
+                        <button class="button" onclick="goToLine()">Ir a línea</button>
+                    `;
+                    break;
+                case 'insert':
+                    menuContent = `
+                        <button class="button" onclick="insertImage()">Imagen</button>
+                        <button class="button" onclick="insertLink()">Enlace</button>
+                        <button class="button" onclick="insertTable()">Tabla</button>
+                        <button class="button" onclick="insertList('ul')">Lista desordenada</button>
+                        <button class="button" onclick="insertList('ol')">Lista ordenada</button>
+                        <button class="button" onclick="insertForm()">Formulario</button>
+                        <button class="button" onclick="insertInput('text')">Input de texto</button>
+                        <button class="button" onclick="insertInput('checkbox')">Checkbox</button>
+                        <button class="button" onclick="insertInput('radio')">Radio button</button>
+                        <button class="button" onclick="insertTextarea()">Área de texto</button>
+                        <button class="button" onclick="insertButton()">Botón</button>
+                        <button class="button" onclick="insertDiv()">Div</button>
+                        <button class="button" onclick="insertSpan()">Span</button>
+                        <button class="button" onclick="insertHorizontalRule()">Línea horizontal</button>
+                        <button class="button" onclick="insertComment()">Comentario</button>
+                    `;
+                    break;
+                case 'format':
+                    menuContent = `
+                        <button class="button" onclick="formatText('bold')">Negrita</button>
+                        <button class="button" onclick="formatText('italic')">Cursiva</button>
+                        <button class="button" onclick="formatText('underline')">Subrayado</button>
+                        <button class="button" onclick="formatHeading()">Encabezado</button>
+                        <button class="button" onclick="formatParagraph()">Párrafo</button>
+                        <button class="button" onclick="formatQuote()">Cita</button>
+                        <button class="button" onclick="formatCode()">Código</button>
+                        <button class="button" onclick="formatColor()">Color de texto</button>
+                        <button class="button" onclick="formatBackgroundColor()">Color de fondo</button>
+                        <button class="button" onclick="formatFontSize()">Tamaño de fuente</button>
+                        <button class="button" onclick="formatFontFamily()">Tipo de fuente</button>
+                        <button class="button" onclick="formatAlignment('left')">Alinear izquierda</button>
+                        <button class="button" onclick="formatAlignment('center')">Centrar</button>
+                        <button class="button" onclick="formatAlignment('right')">Alinear derecha</button>
+                        <button class="button" onclick="formatAlignment('justify')">Justificar</button>
+                    `;
+                    break;
+                case 'tools':
+                    menuContent = `
+                        <button class="button" onclick="validateHTML()">Validar HTML</button>
+                        <button class="button" onclick="formatCode()">Formatear código</button>
+                        <button class="button" onclick="minifyHTML()">Minificar HTML</button>
+                        <button class="button" onclick="convertToMarkdown()">Convertir a Markdown</button>
+                        <button class="button" onclick="generateTemplate()">Generar plantilla</button>
+                        <button class="button" onclick="insertMetaTags()">Insertar meta tags</button>
+                        <button class="button" onclick="optimizeSEO()">Optimizar SEO</button>
+                        <button class="button" onclick="checkAccessibility()">Verificar accesibilidad</button>
+                        <button class="button" onclick="generateSitemap()">Generar sitemap</button>
+                        <button class="button" onclick="checkBrowserCompatibility()">Verificar compatibilidad de navegadores</button>
+                    `;
+                    break;
+                case 'view':
+                    menuContent = `
+                        <button class="button" onclick="toggleLineNumbers()">Mostrar/Ocultar números de línea</button>
+                        <button class="button" onclick="toggleWordWrap()">Activar/Desactivar ajuste de línea</button>
+                        <button class="button" onclick="zoomIn()">Aumentar zoom</button>
+                        <button class="button" onclick="zoomOut()">Disminuir zoom</button>
+                        <button class="button" onclick="resetZoom()">Restablecer zoom</button>
+                        <button class="button" onclick="toggleFullScreen()">Pantalla completa</button>
+                        <button class="button" onclick="toggleDarkMode()">Modo oscuro</button>
+                        <button class="button" onclick="previewHTML()">Vista previa</button>
+                        <button class="button" onclick="showOutline()">Mostrar esquema</button>
+                        <button class="button" onclick="toggleMinimap()">Mostrar/Ocultar minimapa</button>
+                    `;
+                    break;
+                case 'help':
+                    menuContent = `
+                        <button class="button" onclick="showDocumentation()">Documentación</button>
+                        <button class="button" onclick="showShortcuts()">Atajos de teclado</button>
+                        <button class="button" onclick="showTutorial()">Tutorial</button>
+                        <button class="button" onclick="checkForUpdates()">Buscar actualizaciones</button>
+                        <button class="button" onclick="reportBug()">Reportar un error</button>
+                        <button class="button" onclick="showAbout()">Acerca de</button>
+                    `;
+                    break;
+            }
+            showModal(`Menú ${menuType}`, menuContent);
+        }
+
+        function showModal(title, content) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            modalTitle.textContent = title;
+            modalBody.innerHTML = content;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function closeWindow() {
+            if (confirm('¿Estás seguro de que quieres cerrar el editor?')) {
+                window.close();
+            }
+        }
+
+        // Funciones del menú Archivo
+        function newFile() {
+            if (confirm('¿Estás seguro de que quieres crear un nuevo archivo? Se perderán los cambios no guardados.')) {
+                document.getElementById('editor').value = '';
+            }
+        }
+
+        function openFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.html,.htm';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.readAsText(file, 'UTF-8');
+                reader.onload = readerEvent => {
+                    const content = readerEvent.target.result;
+                    document.getElementById('editor').value = content;
+                }
+            }
+            input.click();
+        }
+
+        function saveFile() {
+            const content = document.getElementById('editor').value;
+            const blob = new Blob([content], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'documento.html';
+            a.click();
+        }
+
+        function saveFileAs() {
+            const fileName = prompt("Ingrese el nombre del archivo:", "documento.html");
+            if (fileName) {
+                const content = document.getElementById('editor').value;
+                const blob = new Blob([content], { type: 'text/html' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName;
+                a.click();
+            }
+        }
+
+        function exportToPDF() {
+            alert("Función de exportar a PDF no implementada en este ejemplo.");
+        }
+
+        function printPreview() {
+            const content = document.getElementById('editor').value;
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.open();
+            printWindow.document.write('<html><head><title>Vista previa de impresión</title></head><body>');
+            printWindow.document.write(content);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function closeFile() {
+            if (confirm('¿Estás seguro de que quieres cerrar el archivo actual? Se perderán los cambios no guardados.')) {
+                document.getElementById('editor').value = '';
+            }
+        }
+
+        // Funciones del menú Editar
+        function undo() {
+            document.execCommand('undo', false, null);
+        }
+
+        function redo() {
+            document.execCommand('redo', false, null);
+        }
+
+        function cutText() {
+            document.execCommand('cut', false, null);
+        }
+
+        function copyText() {
+            document.execCommand('copy', false, null);
+        }
+
+        function pasteText() {
+            document.execCommand('paste', false, null);
+        }
+
+        function selectAll() {
+            document.getElementById('editor').select();
+        }
+
+        function find() {
+            const searchTerm = prompt("Ingrese el texto a buscar:");
+            if (searchTerm) {
+                const content = document.getElementById('editor').value;
+                const regex = new RegExp(searchTerm, 'gi');
+                const matches = content.match(regex);
+                if (matches) {
+                    alert(`Se encontraron ${matches.length} coincidencias.`);
+                } else {
+                    alert("No se encontraron coincidencias.");
+                }
+            }
+        }
+
+        function replace() {
+            const searchTerm = prompt("Ingrese el texto a buscar:");
+            if (searchTerm) {
+                const replaceWith = prompt("Ingrese el texto de reemplazo:");
+                if (replaceWith !== null) {
+                    const editor = document.getElementById('editor');
+                    editor.value = editor.value.replace(new RegExp(searchTerm, 'g'), replaceWith);
+                }
+            }
+        }
+
+        function goToLine() {
+            const lineNumber = prompt("Ingrese el número de línea:");
+            if (lineNumber) {
+                const editor = document.getElementById('editor');
+                const lines = editor.value.split('\n');
+                if (lineNumber > 0 && lineNumber <= lines.length) {
+                    const position = lines.slice(0, lineNumber - 1).join('\n').length;
+                    editor.setSelectionRange(position, position);
+                    editor.focus();
+                } else {
+                    alert("Número de línea inválido.");
+                }
+            }
+        }
+
+        // Funciones del menú Insertar
+        function insertImage() {
+            const url = prompt("Ingrese la URL de la imagen:");
+            if (url) {
+                insertToEditor(`<img src="${url}" alt="Imagen">`);
+            }
+        }
+
+        function insertLink() {
+            const url = prompt("Ingrese la URL del enlace:");
+            const text = prompt("Ingrese el texto del enlace:");
+            if (url && text) {
+                insertToEditor(`<a href="${url}">${text}</a>`);
+            }
+        }
+
+        function insertTable() {
+            const rows = prompt("Ingrese el número de filas:");
+            const cols = prompt("Ingrese el número de columnas:");
+            if (rows && cols) {
+                let tableHtml = '<table border="1">\n';
+                for (let i = 0; i < rows; i++) {
+                    tableHtml += '  <tr>\n';
+                    for (let j = 0; j < cols; j++) {
+                        tableHtml += '    <td>Celda</td>\n';
+                    }
+                    tableHtml += '  </tr>\n';
+                }
+                tableHtml += '</table>';
+                insertToEditor(tableHtml);
+            }
+        }
+
+        function insertList(type) {
+            const items = prompt("Ingrese los elementos de la lista separados por comas:");
+            if (items) {
+                const itemsArray = items.split(',');
+                let listHtml = type === 'ul' ? '<ul>\n' : '<ol>\n';
+                itemsArray.forEach(item => {
+                    listHtml += `  <li>${item.trim()}</li>\n`;
+                });
+                listHtml += type === 'ul' ? '</ul>' : '</ol>';
+                insertToEditor(listHtml);
+            }
+        }
+
+        function insertForm() {
+            const formHtml = `
+<form action="#" method="post">
+  <label for="name">Nombre:</label>
+  <input type="text" id="name" name="name" required>
+  
+  <label for="email">Email:</label>
+  <input type="email" id="email" name="email" required>
+  
+  <input type="submit" value="Enviar">
+</form>
+            `;
+            insertToEditor(formHtml);
+        }
+
+        function insertInput(type) {
+            const inputHtml = `<input type="${type}" name="${type}" id="${type}">`;
+            insertToEditor(inputHtml);
+        }
+
+        function insertTextarea() {
+            const textareaHtml = '<textarea rows="4" cols="50"></textarea>';
+            insertToEditor(textareaHtml);
+        }
+
+        function insertButton() {
+            const buttonText = prompt("Ingrese el texto del botón:");
+            if (buttonText) {
+                const buttonHtml = `<button>${buttonText}</button>`;
+                insertToEditor(buttonHtml);
+            }
+        }
+
+        function insertDiv() {
+            const divHtml = '<div>\n  <!-- Contenido del div -->\n</div>';
+            insertToEditor(divHtml);
+        }
+
+        function insertSpan() {
+            const spanHtml = '<span>Texto en span</span>';
+            insertToEditor(spanHtml);
+        }
+
+        function insertHorizontalRule() {
+            insertToEditor('<hr>');
+        }
+
+        function insertComment() {
+            const commentText = prompt("Ingrese el texto del comentario:");
+            if (commentText) {
+                const commentHtml = `<!-- ${commentText} -->`;
+                insertToEditor(commentHtml);
+            }
+        }
+
+        // Funciones del menú Formato
+        function formatText(style) {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            let formattedText;
+            
+            switch(style) {
+                case 'bold':
+                    formattedText = `<strong>${selectedText}</strong>`;
+                    break;
+                case 'italic':
+                    formattedText = `<em>${selectedText}</em>`;
+                    break;
+                case 'underline':
+                    formattedText = `<u>${selectedText}</u>`;
+                    break;
+            }
+            
+            editor.value = editor.value.substring(0, start) + formattedText + editor.value.substring(end);
+        }
+
+        function formatHeading() {
+            const level = prompt("Ingrese el nivel del encabezado (1-6):");
+            if (level && level >= 1 && level <= 6) {
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+                const headingHtml = `<h${level}>${selectedText}</h${level}>`;
+                editor.value = editor.value.substring(0, start) + headingHtml + editor.value.substring(end);
+            }
+        }
+
+        function formatParagraph() {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            const paragraphHtml = `<p>${selectedText}</p>`;
+            editor.value = editor.value.substring(0, start) + paragraphHtml + editor.value.substring(end);
+        }
+
+        function formatQuote() {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            const quoteHtml = `<blockquote>${selectedText}</blockquote>`;
+            editor.value = editor.value.substring(0, start) + quoteHtml + editor.value.substring(end);
+        }
+
+        function formatCode() {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            const codeHtml = `<code>${selectedText}</code>`;
+            editor.value = editor.value.substring(0, start) + codeHtml + editor.value.substring(end);
+        }
+
+        function formatColor() {
+            const color = prompt("Ingrese el color (nombre o código hexadecimal):");
+            if (color) {
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+                const colorHtml = `<span style="color: ${color};">${selectedText}</span>`;
+                editor.value = editor.value.substring(0, start) + colorHtml + editor.value.substring(end);
+            }
+        }
+
+        function formatBackgroundColor() {
+            const color = prompt("Ingrese el color de fondo (nombre o código hexadecimal):");
+            if (color) {
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+                const bgColorHtml = `<span style="background-color: ${color};">${selectedText}</span>`;
+                editor.value = editor.value.substring(0, start) + bgColorHtml + editor.value.substring(end);
+            }
+        }
+
+        function formatFontSize() {
+            const size = prompt("Ingrese el tamaño de fuente (en px):");
+            if (size) {
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+                const fontSizeHtml = `<span style="font-size: ${size}px;">${selectedText}</span>`;
+                editor.value = editor.value.substring(0, start) + fontSizeHtml + editor.value.substring(end);
+            }
+        }
+
+        function formatFontFamily() {
+            const font = prompt("Ingrese el nombre de la fuente:");
+            if (font) {
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+                const fontFamilyHtml = `<span style="font-family: ${font};">${selectedText}</span>`;
+                editor.value = editor.value.substring(0, start) + fontFamilyHtml + editor.value.substring(end);
+            }
+        }
+
+        function formatAlignment(align) {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            const alignmentHtml = `<div style="text-align: ${align};">${selectedText}</div>`;
+            editor.value = editor.value.substring(0, start) + alignmentHtml + editor.value.substring(end);
+        }
+
+        // Funciones del menú Herramientas
+        function validateHTML() {
+            alert("Función de validación HTML no implementada en este ejemplo.");
+        }
+
+        function minifyHTML() {
+            const editor = document.getElementById('editor');
+            const minified = editor.value.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+            editor.value = minified;
+        }
+
+        function convertToMarkdown() {
+            alert("Función de conversión a Markdown no implementada en este ejemplo.");
+        }
+
+        function generateTemplate() {
+            const template = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Página</title>
+</head>
+<body>
+    <header>
+        <h1>Bienvenido a Mi Página</h1>
+    </header>
+    <main>
+        <p>Contenido principal aquí.</p>
+    </main>
+    <footer>
+        <p>&copy; 2023 Mi Página. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>
+            `;
+            document.getElementById('editor').value = template;
+        }
+
+        function insertMetaTags() {
+            const metaTags = `
+    <meta name="description" content="Descripción de la página">
+    <meta name="keywords" content="palabra clave 1, palabra clave 2">
+    <meta name="author" content="Nombre del Autor">
+            `;
+            insertToEditor(metaTags);
+        }
+
+        function optimizeSEO() {
+            alert("Función de optimización SEO no implementada en este ejemplo.");
+        }
+
+        function checkAccessibility() {
+            alert("Función de verificación de accesibilidad no implementada en este ejemplo.");
+        }
+
+        function generateSitemap() {
+            alert("Función de generación de sitemap no implementada en este ejemplo.");
+        }
+
+        function checkBrowserCompatibility() {
+            alert("Función de verificación de compatibilidad de navegadores no implementada en este ejemplo.");
+        }
+
+        // Funciones del menú Ver
+        function toggleLineNumbers() {
+            alert("Función de mostrar/ocultar números de línea no implementada en este ejemplo.");
+        }
+
+        function toggleWordWrap() {
+            const editor = document.getElementById('editor');
+            editor.wrap = editor.wrap === "off" ? "soft" : "off";
+        }
+
+        function zoomIn() {
+            const editor = document.getElementById('editor');
+            let fontSize = parseInt(window.getComputedStyle(editor).fontSize);
+            editor.style.fontSize = (fontSize + 2) + 'px';
+        }
+
+        function zoomOut() {
+            const editor = document.getElementById('editor');
+            let fontSize = parseInt(window.getComputedStyle(editor).fontSize);
+            if (fontSize > 8) {
+                editor.style.fontSize = (fontSize - 2) + 'px';
+            }
+        }
+
+        function resetZoom() {
+            document.getElementById('editor').style.fontSize = '16px';
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function previewHTML() {
+            const content = document.getElementById('editor').value;
+            const previewWindow = window.open('', 'Vista Previa', 'width=800,height=600');
+            previewWindow.document.open();
+            previewWindow.document.write(content);
+            previewWindow.document.close();
+        }
+
+        function showOutline() {
+            alert("Función de mostrar esquema no implementada en este ejemplo.");
+        }
+
+        function toggleMinimap() {
+            alert("Función de mostrar/ocultar minimapa no implementada en este ejemplo.");
+        }
+
+        // Funciones del menú Ayuda
+        function showDocumentation() {
+            alert("Función de mostrar documentación no implementada en este ejemplo.");
+        }
+
+        function showShortcuts() {
+            alert("Función de mostrar atajos de teclado no implementada en este ejemplo.");
+        }
+
+        function showTutorial() {
+            alert("Función de mostrar tutorial no implementada en este ejemplo.");
+        }
+
+        function checkForUpdates() {
+            alert("Función de buscar actualizaciones no implementada en este ejemplo.");
+        }
+
+        function reportBug() {
+            alert("Función de reportar un error no implementada en este ejemplo.");
+        }
+
+        function showAbout() {
+            showModal('Acerca de', `
+                <h2>Editor HTML XP Enhanced</h2>
+                <p>Versión: 1.0</p>
+                <p>Desarrollado por: Tu Nombre</p>
+                <p>© 2023 Todos los derechos reservados.</p>
+            `);
+        }
+
+        function insertToEditor(text) {
+            const editor = document.getElementById('editor');
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const content = editor.value;
+            editor.value = content.substring(0, start) + text + content.substring(end);
+        }
+
+        // Cerrar modal al hacer clic fuera de él
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modal')) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
